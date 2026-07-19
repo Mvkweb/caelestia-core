@@ -1,0 +1,13 @@
+{
+  "itemGroup.caelestiaprotection": "Example Mod Tab",
+  "block.caelestiaprotection.example_block": "Example Block",
+  "item.caelestiaprotection.example_item": "Example Item",
+
+  "caelestiaprotection.configuration.title": "Caelestia-Protection Configs",
+  "caelestiaprotection.configuration.section.caelestiaprotection.common.toml": "Caelestia-Protection Configs",
+  "caelestiaprotection.configuration.section.caelestiaprotection.common.toml.title": "Caelestia-Protection Configs",
+  "caelestiaprotection.configuration.items": "Item List",
+  "caelestiaprotection.configuration.logDirtBlock": "Log Dirt Block",
+  "caelestiaprotection.configuration.magicNumberIntroduction": "Magic Number Text",
+  "caelestiaprotection.configuration.magicNumber": "Magic Number"
+}

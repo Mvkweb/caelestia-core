@@ -1,0 +1,31 @@
+discord:
+  bot-token: "YOUR_BOT_TOKEN_HERE"
+  channel-id: "YOUR_CHANNEL_ID_HERE"
+  guild-id: "YOUR_GUILD_ID_HERE"
+
+messages:
+  minecraft-to-discord: "%message%"
+  discord-to-minecraft: "<color:#5865F2>💬</color> <gray>%username%</gray> <dark_gray>•</dark_gray> <white>%message%</white>"
+  neoforge-to-minecraft: "<color:#E36139>⚙</color> <gray>%username%</gray> <dark_gray>•</dark_gray> <white>%message%</white>"
+  join: "joined the server"
+  quit: "left the server"
+  death: "%death_message%"
+  server-start: "🟢 **Server has started!**"
+  server-stop: "🔴 **Server is shutting down...**"
+
+avatars:
+  skin-api-url: "https://mc-heads.net"
+  render-type: "head"
+  scale: 100
+
+bridge:
+  channel-name: "caelestia:bridge"
+  socket-port: 25570
+  socket-password: "YOUR_SECRET_PASSWORD"
+
+features:
+  relay-join-quit: true
+  relay-death-messages: true
+  relay-advancement-messages: true
+  server-start-stop: true
+  use-webhooks: true

@@ -1,0 +1,7 @@
+name: Caelestia
+version: 1.0.0
+main: com.caelestia.paper.CaelestiaPlugin
+description: Discord and Minecraft Chat Bridge supporting NeoForge interop
+api-version: '26.2'
+author: Caelestia
+website: https://caelestia.com
