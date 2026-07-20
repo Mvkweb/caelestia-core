@@ -43,9 +43,13 @@ class CaelestiaPlugin : JavaPlugin() {
         // Register Listeners
         server.pluginManager.registerEvents(MinecraftChatListener(this), this)
         server.pluginManager.registerEvents(ServerEventListener(this), this)
+        if (caelestiaConfig.featXpClumps) {
+            server.pluginManager.registerEvents(com.caelestia.paper.listeners.XpClumpsListener(this), this)
+        }
 
         // Register Command
         server.commandMap.register(name.lowercase(), CaelestiaCommand(this))
+        server.commandMap.register(name.lowercase(), com.caelestia.paper.commands.DiscordReplyCommand(this))
 
         // Send Server Start message
         if (caelestiaConfig.featServerStartStop) {

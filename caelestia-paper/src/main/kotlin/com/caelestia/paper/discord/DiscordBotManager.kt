@@ -15,6 +15,12 @@ class DiscordBotManager(private val plugin: CaelestiaPlugin) {
         private set
         
     val webhookManager = WebhookManager(plugin, this)
+    
+    val messageCache = object : java.util.LinkedHashMap<String, Pair<String, String>>(100, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Pair<String, String>>): Boolean {
+            return size > 100
+        }
+    }
 
     fun init() {
         val config = plugin.caelestiaConfig
@@ -32,6 +38,11 @@ class DiscordBotManager(private val plugin: CaelestiaPlugin) {
                 .build()
                 
             jda?.awaitReady()
+            if (config.discordGuildId.isNotBlank()) {
+                jda?.getGuildById(config.discordGuildId)?.updateCommands()?.addCommands(
+                    net.dv8tion.jda.api.interactions.commands.build.Commands.slash("status", "View server status and performance")
+                )?.queue()
+            }
             plugin.logger.info("JDA started successfully!")
             
             webhookManager.init()
@@ -81,6 +92,19 @@ class DiscordBotManager(private val plugin: CaelestiaPlugin) {
     fun sendWebhook(username: String, uuidStr: String, content: String) {
         val uuid = try { UUID.fromString(uuidStr) } catch (e: Exception) { null }
         webhookManager.sendMessage(username, uuid, content)
+    }
+
+    fun replyToMessage(username: String, uuidStr: String, discordMessageId: String, replyContent: String) {
+        val cached = messageCache[discordMessageId]
+        val formattedContent = if (cached != null) {
+            val author = cached.first
+            var text = cached.second
+            if (text.length > 40) text = text.take(37) + "..."
+            "> **$author** _${text}_\n$replyContent"
+        } else {
+            replyContent
+        }
+        sendWebhook(username, uuidStr, formattedContent)
     }
 
     fun sendMessage(text: String) {

@@ -28,7 +28,11 @@ class CaelestiaConfig(private val config: FileConfiguration) {
 
     val bridgeChannelName: String = config.getString("bridge.channel-name") ?: "caelestia:bridge"
     val bridgeSocketPort: Int = config.getInt("bridge.socket-port", 25570)
-    val bridgeSocketPass: String = config.getString("bridge.socket-password") ?: "super_secret_password"
+    val bridgeSocketPass: String = config.getString("bridge.socket-password", "YOUR_SECRET_PASSWORD") ?: "YOUR_SECRET_PASSWORD"
+
+    val featXpClumps: Boolean = config.getBoolean("xp-clumps.enabled", true)
+    val xpClumpsMaxValue: Int = config.getInt("xp-clumps.max-value", 500)
+    val xpClumpsMergeRadius: Double = config.getDouble("xp-clumps.merge-radius", 4.0)
 
     val featRelayJoinQuit: Boolean = config.getBoolean("features.relay-join-quit", true)
     val featRelayDeath: Boolean = config.getBoolean("features.relay-death-messages", true)

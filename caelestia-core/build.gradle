@@ -30,6 +30,10 @@ sourceSets.main.resources {
 repositories {
     mavenLocal()
     maven {
+        name = "luck-repo"
+        url = uri("https://repo.lucko.me/")
+    }
+    maven {
         name = 'NeoForged'
         url = 'https://maven.neoforged.net/releases'
     }
@@ -135,7 +139,8 @@ configurations {
 }
 
 dependencies {
-    implementation "net.neoforged:neoforge:${neo_version}"
+    implementation("net.neoforged:neoforge:${neo_version}")
+    compileOnly("me.lucko:spark-api:0.1-SNAPSHOT")
     implementation 'thedarkcolour:kotlinforforge-neoforge:6.0.0'
 
     // Xaero's Map OPAC API dependency

@@ -159,6 +159,32 @@ object EventHandlers {
             }
         )
 
+        dispatcher.register(
+            Commands.literal("discordreply")
+                .then(Commands.argument("messageId", com.mojang.brigadier.arguments.StringArgumentType.word())
+                    .then(Commands.argument("message", com.mojang.brigadier.arguments.StringArgumentType.greedyString())
+                        .executes { context ->
+                            val player = context.source.playerOrException
+                            val messageId = com.mojang.brigadier.arguments.StringArgumentType.getString(context, "messageId")
+                            val messageContent = com.mojang.brigadier.arguments.StringArgumentType.getString(context, "message")
+
+                            val bridgeMsg = com.example.caelestiaprotection.bridge.BridgeMessage(
+                                source = com.example.caelestiaprotection.bridge.Source.NEOFORGE,
+                                type = com.example.caelestiaprotection.bridge.Type.DISCORD_REPLY,
+                                playerName = player.name.string,
+                                playerUuid = player.uuid.toString(),
+                                messageId = messageId,
+                                message = messageContent
+                            )
+                            CaelestiaProtection.bridgeClient?.broadcast(bridgeMsg)
+                            
+                            context.source.sendSuccess({ Component.literal("§aReply sent to Discord!") }, false)
+                            1
+                        }
+                    )
+                )
+        )
+
         event.dispatcher.register(
             Commands.literal("unclaim")
                 .executes { context ->

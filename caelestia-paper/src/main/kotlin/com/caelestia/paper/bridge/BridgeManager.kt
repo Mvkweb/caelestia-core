@@ -21,6 +21,8 @@ class BridgeManager(private val plugin: CaelestiaPlugin, private val discordBot:
     private var serverThread: Thread? = null
     private var running = false
     
+    val pendingSparkRequests = java.util.concurrent.ConcurrentHashMap<String, Pair<net.dv8tion.jda.api.interactions.InteractionHook, Map<String, String>>>()
+    
     private val clients = CopyOnWriteArrayList<Socket>()
     private val clientWriters = CopyOnWriteArrayList<PrintWriter>()
 
@@ -109,6 +111,32 @@ class BridgeManager(private val plugin: CaelestiaPlugin, private val discordBot:
             if (processedMessages.size > 1000) processedMessages.clear()
             
             when (msg.type) {
+                Type.SYSTEM -> {
+                    // Send directly to the main bridge channel as pure text
+                    plugin.discordBot.sendMessage("**[System]** ${msg.message}")
+                }
+                Type.DISCORD_REPLY -> {
+                    plugin.discordBot.replyToMessage(
+                        username = msg.playerName ?: "Unknown",
+                        uuidStr = msg.playerUuid ?: "",
+                        discordMessageId = msg.messageId,
+                        replyContent = msg.message
+                    )
+
+                    val mcMessage = msg.message
+                    
+                    val mm = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                    val paperFormat = "<color:#5865F2>💬</color> <gray>${msg.playerName ?: "Unknown"}</gray> <dark_gray>•</dark_gray> <white>${msg.message}</white>"
+                    plugin.server.broadcast(mm.deserialize(paperFormat))
+                    
+                    plugin.bridgeManager.broadcast(BridgeMessage(
+                        source = Source.PAPER,
+                        type = Type.CHAT,
+                        playerName = msg.playerName,
+                        playerUuid = msg.playerUuid,
+                        message = mcMessage
+                    ))
+                }
                 Type.CHAT -> {
                     // It's from NeoForge, broadcast to Paper
                     if (msg.source == Source.NEOFORGE) {
@@ -168,6 +196,21 @@ class BridgeManager(private val plugin: CaelestiaPlugin, private val discordBot:
                                 .replace("%death_message%", msg.message)
                             plugin.discordBot.sendWebhook(msg.playerName ?: "Unknown", msg.playerUuid ?: "00000000-0000-0000-0000-000000000000", discordMsg)
                         }
+                    }
+                }
+                Type.SPARK_RESPONSE -> {
+                    val pending = pendingSparkRequests.remove(msg.messageId)
+                    if (pending != null) {
+                        val paperStats = pending.second
+                        val neoForgeStats = com.google.gson.Gson().fromJson(msg.message, Map::class.java) as Map<*, *>
+                        
+                        val embed = net.dv8tion.jda.api.EmbedBuilder()
+                            .setTitle("Caelestia Server Status")
+                            .setColor(java.awt.Color.decode("#A259FF"))
+                            .addField("Vanilla Server", "TPS: ${paperStats["tps"]}\nMSPT: ${paperStats["mspt"]}ms\nCPU: ${paperStats["cpu"]}%\nRAM: ${paperStats["ram"]}\nPlayers: ${paperStats["players"]}\nChunks: ${paperStats["chunks"]}\nUptime: ${paperStats["uptime"]}", false)
+                            .addField("Modded Server", "TPS: ${neoForgeStats["tps"]}\nMSPT: ${neoForgeStats["mspt"]}ms\nCPU: ${neoForgeStats["cpu"]}%\nRAM: ${neoForgeStats["ram"]}\nPlayers: ${neoForgeStats["players"]}\nChunks: ${neoForgeStats["chunks"]}\nUptime: ${neoForgeStats["uptime"]}", false)
+                            .build()
+                        pending.first.editOriginalEmbeds(embed).queue()
                     }
                 }
                 else -> {}

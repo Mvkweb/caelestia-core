@@ -13,7 +13,10 @@ enum class Type {
     DEATH,
     ADVANCEMENT,
     TAB_COMPLETIONS,
-    SYSTEM
+    SPARK_REQUEST,
+    SPARK_RESPONSE,
+    SYSTEM,
+    DISCORD_REPLY
 }
 
 data class BridgeMessage(

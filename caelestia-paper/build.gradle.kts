@@ -8,7 +8,9 @@ version = "1.0.0"
 
 repositories {
     mavenCentral()
-    maven("https://repo.papermc.io/repository/maven-public/")
+    maven { url = uri("https://repo.papermc.io/repository/maven-public/") }
+    maven { url = uri("https://oss.sonatype.org/content/groups/public/") }
+    maven { url = uri("https://repo.lucko.me/") }
 }
 
 dependencies {
@@ -17,7 +19,10 @@ dependencies {
     
     // Kotlin standard library is automatically added by the kotlin plugin in newer versions, 
     // but JDA is needed
-    implementation("net.dv8tion:JDA:6.5.0")
+    implementation("net.dv8tion:JDA:5.2.1") {
+        exclude(module = "opus-java")
+    }
+    compileOnly("me.lucko:spark-api:0.1-SNAPSHOT")
     
     // SnakeYAML is already provided by PaperMC but keeping it clean for ide resolution if needed,
     // although we will just use Bukkit's built-in YamlConfiguration.

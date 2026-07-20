@@ -3,6 +3,17 @@ discord:
   channel-id: "YOUR_CHANNEL_ID_HERE"
   guild-id: "YOUR_GUILD_ID_HERE"
 
+# -----------------------------------------------------------------------------
+# XP Clumps
+# -----------------------------------------------------------------------------
+# Automatically merges experience orbs into a single larger orb to boost FPS!
+xp-clumps:
+  enabled: true
+  # The maximum amount of XP a single orb can hold (50 is good for sharing, 500+ is extreme clumping)
+  max-value: 500
+  # The radius (in blocks) to search for nearby orbs to merge into
+  merge-radius: 4.0
+
 messages:
   minecraft-to-discord: "%message%"
   discord-to-minecraft: "<color:#5865F2>💬</color> <gray>%username%</gray> <dark_gray>•</dark_gray> <white>%message%</white>"

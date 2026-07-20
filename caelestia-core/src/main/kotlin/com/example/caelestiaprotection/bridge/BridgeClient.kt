@@ -3,6 +3,8 @@ package com.example.caelestiaprotection.bridge
 import com.example.caelestiaprotection.core.CaelestiaProtection
 import com.google.gson.Gson
 import net.minecraft.network.chat.Component
+import net.minecraft.network.chat.ClickEvent
+import net.minecraft.network.chat.HoverEvent
 import net.neoforged.neoforge.server.ServerLifecycleHooks
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -60,7 +62,7 @@ class BridgeClient {
                         processMessage(line!!)
                     }
                 } catch (e: Exception) {
-                    // Ignore, will retry
+                    CaelestiaProtection.LOGGER.error("Bridge connection lost or error occurred!", e)
                 } finally {
                     cleanup()
                     if (running) {
@@ -89,7 +91,14 @@ class BridgeClient {
                         } else {
                             Component.literal("§b${msg.playerName} §8» §f")
                         }
-                        val finalMsg = prefix.copy().append(Component.literal(msg.message.replace("<gold>", "§6").replace("</gold>", "§f")))
+                        var finalMsg = prefix.copy().append(Component.literal(msg.message.replace("<gold>", "§6").replace("</gold>", "§f")))
+                        
+                        if (msg.source == Source.DISCORD && msg.messageId.matches(Regex("\\d+"))) {
+                            finalMsg = finalMsg.withStyle { style -> 
+                                style.withClickEvent(ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/discordreply ${msg.messageId} "))
+                                     .withHoverEvent(HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Click to reply to ${msg.playerName}!")))
+                            }
+                        }
                         
                         server.playerList.broadcastSystemMessage(finalMsg, false)
                     } else if (msg.type == Type.JOIN) {
@@ -105,6 +114,50 @@ class BridgeClient {
                                 completions
                             )
                             player.connection.send(packet)
+                        }
+                    } else if (msg.type == Type.SPARK_REQUEST) {
+                        CaelestiaProtection.LOGGER.info("Received SPARK_REQUEST from Paper!")
+                        try {
+                            val spark = me.lucko.spark.api.SparkProvider.get()
+                            val tps = spark.tps()?.poll(me.lucko.spark.api.statistic.StatisticWindow.TicksPerSecond.MINUTES_5) ?: 0.0
+                            val msptInfo = spark.mspt()?.poll(me.lucko.spark.api.statistic.StatisticWindow.MillisPerTick.MINUTES_1)
+                            val mspt = msptInfo?.mean() ?: 0.0
+                            val cpu = spark.cpuSystem().poll(me.lucko.spark.api.statistic.StatisticWindow.CpuUsage.MINUTES_1) * 100
+                            
+                            val usedMem = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1024 / 1024
+                            val maxMem = Runtime.getRuntime().maxMemory() / 1024 / 1024
+                            val players = "${server.playerCount} / ${server.maxPlayers}"
+                            val chunks = server.allLevels.sumOf { it.chunkSource.loadedChunksCount }.toString()
+                            
+                            val uptimeMs = java.lang.management.ManagementFactory.getRuntimeMXBean().uptime
+                            val seconds = (uptimeMs / 1000) % 60
+                            val minutes = (uptimeMs / (1000 * 60)) % 60
+                            val hours = (uptimeMs / (1000 * 60 * 60)) % 24
+                            val days = (uptimeMs / (1000 * 60 * 60 * 24))
+                            val uptimeStr = if (days > 0) "${days}d ${hours}h ${minutes}m" else "${hours}h ${minutes}m ${seconds}s"
+                            
+                            val neoStats = mapOf(
+                                "tps" to String.format("%.2f", tps),
+                                "mspt" to String.format("%.2f", mspt),
+                                "cpu" to String.format("%.2f", cpu),
+                                "ram" to "${usedMem}MB / ${maxMem}MB",
+                                "players" to players,
+                                "chunks" to chunks,
+                                "uptime" to uptimeStr
+                            )
+                            
+                            CaelestiaProtection.LOGGER.info("Sending SPARK_RESPONSE back to Paper")
+                            
+                            broadcast(BridgeMessage(
+                                source = Source.NEOFORGE,
+                                type = Type.SPARK_RESPONSE,
+                                playerName = null,
+                                playerUuid = null,
+                                messageId = msg.messageId,
+                                message = gson.toJson(neoStats)
+                            ))
+                        } catch (e: Exception) {
+                            CaelestiaProtection.LOGGER.error("Failed to fetch spark stats", e)
                         }
                     }
                 }

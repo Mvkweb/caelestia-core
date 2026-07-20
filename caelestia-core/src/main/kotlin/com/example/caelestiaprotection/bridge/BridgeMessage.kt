@@ -7,7 +7,10 @@ enum class Source {
 }
 
 enum class Type {
-    CHAT, JOIN, QUIT, DEATH, ADVANCEMENT, TAB_COMPLETIONS
+    CHAT, JOIN, QUIT, DEATH, ADVANCEMENT, TAB_COMPLETIONS,
+    SPARK_REQUEST,
+    SPARK_RESPONSE,
+    DISCORD_REPLY
 }
 
 data class BridgeMessage(
