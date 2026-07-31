@@ -1,0 +1,13 @@
+{
+  "itemGroup.caelestia": "Example Mod Tab",
+  "block.caelestia.example_block": "Example Block",
+  "item.caelestia.example_item": "Example Item",
+
+  "caelestia.configuration.title": "Caelestia Configs",
+  "caelestia.configuration.section.caelestia.common.toml": "Caelestia Configs",
+  "caelestia.configuration.section.caelestia.common.toml.title": "Caelestia Configs",
+  "caelestia.configuration.items": "Item List",
+  "caelestia.configuration.logDirtBlock": "Log Dirt Block",
+  "caelestia.configuration.magicNumberIntroduction": "Magic Number Text",
+  "caelestia.configuration.magicNumber": "Magic Number"
+}

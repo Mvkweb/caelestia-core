@@ -3,5 +3,13 @@ version: 1.0.0
 main: com.caelestia.paper.CaelestiaPlugin
 description: Discord and Minecraft Chat Bridge supporting NeoForge interop
 api-version: '26.2'
-author: Caelestia
-website: https://caelestia.com
+author: Mvk, sorawhip
+website: https://caelestiashell.com
+
+commands:
+  discordreply:
+    description: Reply to a Discord message
+    usage: /discordreply <messageId> <message>
+  emojis:
+    description: List all available custom emojis
+    usage: /emojis

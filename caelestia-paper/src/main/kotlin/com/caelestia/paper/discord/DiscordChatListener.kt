@@ -8,6 +8,19 @@ import com.caelestia.paper.util.ColorUtil
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
 import org.bukkit.Bukkit
+import com.caelestia.paper.emoji.EmojiRegistry
+import net.kyori.adventure.text.Component as AdventureComponent
+import net.kyori.adventure.text.format.NamedTextColor
+import net.kyori.adventure.text.format.TextColor as AdventureTextColor
+import net.kyori.adventure.text.event.ClickEvent as AdventureClickEvent
+import net.kyori.adventure.text.event.HoverEvent as AdventureHoverEvent
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
+import me.lucko.spark.api.SparkProvider
+import me.lucko.spark.api.statistic.StatisticWindow
+import net.dv8tion.jda.api.EmbedBuilder
+import java.awt.Color
+import java.lang.management.ManagementFactory
+import java.util.UUID
 
 class DiscordChatListener(private val plugin: CaelestiaPlugin) : ListenerAdapter() {
 
@@ -22,6 +35,7 @@ class DiscordChatListener(private val plugin: CaelestiaPlugin) : ListenerAdapter
         val username = member.effectiveName
         val contentRaw = event.message.contentDisplay
         var content = contentRaw.replace(Regex("```[\\s\\S]*?```"), "[Code snippet hidden]")
+        content = EmojiRegistry.translateDiscordToMc(content)
 
         if (event.message.attachments.isNotEmpty()) {
             val count = event.message.attachments.size
@@ -33,38 +47,67 @@ class DiscordChatListener(private val plugin: CaelestiaPlugin) : ListenerAdapter
             }
         }
 
+        // Check if this is a reply to another message
+        val referencedMessage = event.message.referencedMessage
+        var refAuthor: String? = null
+        var refContent: String? = null
+        if (referencedMessage != null) {
+            refAuthor = if (referencedMessage.isWebhookMessage) {
+                referencedMessage.author.name
+            } else {
+                referencedMessage.member?.effectiveName ?: referencedMessage.author.effectiveName
+            }
+            refContent = referencedMessage.contentDisplay.let {
+                if (it.length > 40) it.substring(0, 40) + "..." else it
+            }
+        }
 
-        val configMsg = plugin.caelestiaConfig.msgDiscordToMc
-            .replace("%username%", username)
+        val finalUsername = if (refAuthor != null) {
+            "<dark_gray>[Replying to $refAuthor]</dark_gray> $username"
+        } else {
+            username
+        }
+        
+        var finalMsg = plugin.caelestiaConfig.msgDiscordToMc
+            .replace("%username%", finalUsername)
             .replace("%message%", content)
+
+        finalMsg = EmojiRegistry.translateDiscordToMc(finalMsg)
 
         // Cache for replying
         plugin.discordBot.messageCache[event.messageId] = Pair(username, content)
 
         // Parse format colors/markdown to mini message
-        val miniMessageStr = ColorUtil.formatDiscordToMinecraft(configMsg)
+        val miniMessageStr = ColorUtil.formatDiscordToMinecraft(finalMsg)
+        
         val component = ColorUtil.parseMiniMessage(miniMessageStr)
-            .clickEvent(net.kyori.adventure.text.event.ClickEvent.suggestCommand("/discordreply ${event.messageId} "))
-            .hoverEvent(net.kyori.adventure.text.event.HoverEvent.showText(net.kyori.adventure.text.Component.text("Click to reply to $username!")))
+            .clickEvent(AdventureClickEvent.suggestCommand("/discordreply ${event.messageId} "))
+            .hoverEvent(AdventureHoverEvent.showText(AdventureComponent.text("Click to reply to $username!")))
 
         // Broadcast to Minecraft main thread
         Bukkit.getScheduler().runTask(plugin, Runnable {
             Bukkit.broadcast(component)
         })
 
-        // Broadcast to Bridge for NeoForge
+        // Broadcast to Bridge for NeoForge - include reply context if present
+        val bridgeContent = if (refAuthor != null && refContent != null) {
+            "$refAuthor: $refContent\n$content"
+        } else {
+            content
+        }
+        val bridgeType = if (refAuthor != null && refContent != null) Type.DISCORD_REPLY else Type.CHAT
         val bridgeMessage = BridgeMessage(
             source = Source.DISCORD,
-            type = Type.CHAT,
+            type = bridgeType,
             playerName = username,
             playerUuid = null,
             messageId = event.messageId,
-            message = content
+            message = bridgeContent
         )
         plugin.bridgeManager.broadcast(bridgeMessage)
     }
 
-    override fun onSlashCommandInteraction(event: net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent) {
+    override fun onSlashCommandInteraction(event: SlashCommandInteractionEvent) {
         if (event.channel.id != plugin.caelestiaConfig.discordChannelId) {
             event.reply("This command can only be used in the designated channel.").setEphemeral(true).queue()
             return
@@ -74,18 +117,18 @@ class DiscordChatListener(private val plugin: CaelestiaPlugin) : ListenerAdapter
             event.deferReply().queue()
             
             // Generate Paper spark stats
-            val spark = me.lucko.spark.api.SparkProvider.get()
-            val tps = spark.tps()?.poll(me.lucko.spark.api.statistic.StatisticWindow.TicksPerSecond.MINUTES_5) ?: 0.0
-            val msptInfo = spark.mspt()?.poll(me.lucko.spark.api.statistic.StatisticWindow.MillisPerTick.MINUTES_1)
+            val spark = SparkProvider.get()
+            val tps = spark.tps()?.poll(StatisticWindow.TicksPerSecond.MINUTES_5) ?: 0.0
+            val msptInfo = spark.mspt()?.poll(StatisticWindow.MillisPerTick.MINUTES_1)
             val mspt = msptInfo?.mean() ?: 0.0
-            val cpu = spark.cpuSystem().poll(me.lucko.spark.api.statistic.StatisticWindow.CpuUsage.MINUTES_1) * 100
+            val cpu = spark.cpuSystem().poll(StatisticWindow.CpuUsage.MINUTES_1) * 100
             
             val usedMem = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1024 / 1024
             val maxMem = Runtime.getRuntime().maxMemory() / 1024 / 1024
-            val players = "${org.bukkit.Bukkit.getOnlinePlayers().size} / ${org.bukkit.Bukkit.getMaxPlayers()}"
-            val chunks = org.bukkit.Bukkit.getWorlds().sumOf { it.loadedChunks.size }.toString()
+            val players = "${Bukkit.getOnlinePlayers().size} / ${Bukkit.getMaxPlayers()}"
+            val chunks = Bukkit.getWorlds().sumOf { it.loadedChunks.size }.toString()
             
-            val uptimeMs = java.lang.management.ManagementFactory.getRuntimeMXBean().uptime
+            val uptimeMs = ManagementFactory.getRuntimeMXBean().uptime
             val seconds = (uptimeMs / 1000) % 60
             val minutes = (uptimeMs / (1000 * 60)) % 60
             val hours = (uptimeMs / (1000 * 60 * 60)) % 24
@@ -102,7 +145,7 @@ class DiscordChatListener(private val plugin: CaelestiaPlugin) : ListenerAdapter
                 "uptime" to uptimeStr
             )
             
-            val reqId = java.util.UUID.randomUUID().toString()
+            val reqId = UUID.randomUUID().toString()
             plugin.bridgeManager.pendingSparkRequests[reqId] = Pair(event.hook, paperStats)
             
             plugin.bridgeManager.broadcast(BridgeMessage(
@@ -115,12 +158,12 @@ class DiscordChatListener(private val plugin: CaelestiaPlugin) : ListenerAdapter
             ))
             
             // Timeout after 3 seconds if NeoForge doesn't respond
-            org.bukkit.Bukkit.getScheduler().runTaskLater(plugin, Runnable {
+            Bukkit.getScheduler().runTaskLater(plugin, Runnable {
                 val pending = plugin.bridgeManager.pendingSparkRequests.remove(reqId)
                 if (pending != null) {
-                    val embed = net.dv8tion.jda.api.EmbedBuilder()
+                    val embed = EmbedBuilder()
                         .setTitle("Caelestia Server Status")
-                        .setColor(java.awt.Color.decode("#A259FF"))
+                        .setColor(Color.decode("#A259FF"))
                         .addField("Vanilla Server", "TPS: ${paperStats["tps"]}\nMSPT: ${paperStats["mspt"]}ms\nCPU: ${paperStats["cpu"]}%\nRAM: ${paperStats["ram"]}\nPlayers: ${paperStats["players"]}\nChunks: ${paperStats["chunks"]}\nUptime: ${paperStats["uptime"]}", false)
                         .addField("Modded Server", "Offline / Unreachable", false)
                         .build()

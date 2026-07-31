@@ -1,0 +1,11 @@
+resource-pack:
+  server-ip: "127.0.0.1"
+  server-port: 25625
+  prompt-message: "<color:#A259FF>✨</color> <white>Please accept the custom resource pack to see Discord emojis in chat!</white>"
+
+# Override default 32x32 size for any emoji.
+# Put your own local emojis (.png) into plugins/Caelestia/custom-emojis/ to sync them!
+emoji-sizes:
+  discord: 32
+  modded: 32
+  vanilla: 32

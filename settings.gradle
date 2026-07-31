@@ -3,4 +3,4 @@ rootProject.name = 'caelestia'
 // Use a composite build so that both projects can keep their separate Gradle versions
 // (Paper uses Gradle 9, NeoForge uses Gradle 8)
 includeBuild 'caelestia-paper'
-includeBuild 'caelestia-core'
+includeBuild 'caelestia-neoforge'

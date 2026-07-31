@@ -8,16 +8,16 @@ class CaelestiaConfig(private val config: FileConfiguration) {
     val discordGuildId: String = config.getString("discord.guild-id") ?: ""
 
     val msgMcToDiscord: String = config.getString("messages.minecraft-to-discord") ?: "**%player%** » %message%"
-    val msgDiscordToMc: String = config.getString("messages.discord-to-minecraft") ?: "<dark_blue>[Discord]</dark_blue> <aqua>%username%</aqua> » %message%"
-    val msgNeoForgeToMc: String = config.getString("messages.neoforge-to-minecraft") ?: "<color:#E36139>⚙</color> <gray>%username%</gray> <dark_gray>•</dark_gray> <white>%message%</white>"
+    val msgDiscordToMc: String = config.getString("messages.discord-to-minecraft") ?: ":discord: <gray>%username%</gray> <dark_gray>•</dark_gray> <white>%message%</white>"
+    val msgNeoForgeToMc: String = config.getString("messages.neoforge-to-minecraft") ?: ":modded: <gray>%username%</gray> <dark_gray>•</dark_gray> <white>%message%</white>"
     
     val msgJoin: String = config.getString("messages.join") ?: "**%player%** joined the server"
     val msgQuit: String = config.getString("messages.quit") ?: "**%player%** left the server"
     val msgDeath: String = config.getString("messages.death") ?: "**%player%** %death_message%"
     
-    val msgNeoForgeJoin: String = config.getString("messages.neoforge-join") ?: "⚙ **%player%** joined the modded server"
-    val msgNeoForgeQuit: String = config.getString("messages.neoforge-quit") ?: "⚙ **%player%** left the modded server"
-    val msgNeoForgeDeath: String = config.getString("messages.neoforge-death") ?: "⚙ **%player%** %death_message%"
+    val msgNeoForgeJoin: String = config.getString("messages.neoforge-join") ?: "joined the server"
+    val msgNeoForgeQuit: String = config.getString("messages.neoforge-quit") ?: "left the server"
+    val msgNeoForgeDeath: String = config.getString("messages.neoforge-death") ?: "%death_message%"
 
     val msgServerStart: String = config.getString("messages.server-start") ?: "🟢 **Server has started!**"
     val msgServerStop: String = config.getString("messages.server-stop") ?: "🔴 **Server is shutting down...**"
@@ -39,6 +39,12 @@ class CaelestiaConfig(private val config: FileConfiguration) {
     val featRelayAdvancement: Boolean = config.getBoolean("features.relay-advancement-messages", true)
     val featServerStartStop: Boolean = config.getBoolean("features.server-start-stop", true)
     val featUseWebhooks: Boolean = config.getBoolean("features.use-webhooks", true)
+
+    var featureWebhooks: Boolean = config.getBoolean("features.use-webhooks", true)
+    var featureJoinQuit: Boolean = config.getBoolean("features.relay-join-quit", true)
+    var featureDeathMessages: Boolean = config.getBoolean("features.relay-death-messages", true)
+
+
 
     fun isValidDiscordConfig(): Boolean {
         return discordBotToken.isNotBlank() && discordBotToken != "YOUR_BOT_TOKEN" &&

@@ -25,7 +25,6 @@ class ServerEventListener(private val plugin: CaelestiaPlugin) : Listener {
         
         plugin.discordBot.webhookManager.sendMessage(
             username = player.name,
-            uuid = player.uniqueId,
             content = text
         )
         
@@ -48,7 +47,6 @@ class ServerEventListener(private val plugin: CaelestiaPlugin) : Listener {
         
         plugin.discordBot.webhookManager.sendMessage(
             username = player.name,
-            uuid = player.uniqueId,
             content = text
         )
         
@@ -76,7 +74,6 @@ class ServerEventListener(private val plugin: CaelestiaPlugin) : Listener {
             
         plugin.discordBot.webhookManager.sendMessage(
             username = player.name,
-            uuid = player.uniqueId,
             content = text
         )
         
@@ -104,7 +101,6 @@ class ServerEventListener(private val plugin: CaelestiaPlugin) : Listener {
         
         plugin.discordBot.webhookManager.sendMessage(
             username = player.name,
-            uuid = player.uniqueId,
             content = "has made the advancement **[$title]**"
         )
         

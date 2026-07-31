@@ -11,17 +11,26 @@ import java.io.PrintWriter
 import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.CopyOnWriteArrayList
+import com.caelestia.paper.emoji.EmojiRegistry
+import net.kyori.adventure.text.minimessage.MiniMessage
+import net.dv8tion.jda.api.interactions.InteractionHook
+import net.dv8tion.jda.api.EmbedBuilder
+import java.awt.Color
+import java.lang.management.ManagementFactory
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 class BridgeManager(private val plugin: CaelestiaPlugin, private val discordBot: DiscordBotManager) {
     
     private val gson = Gson()
     private val processedMessages = mutableSetOf<String>()
+    private val miniMessage = MiniMessage.miniMessage()
     
     private var serverSocket: ServerSocket? = null
     private var serverThread: Thread? = null
     private var running = false
     
-    val pendingSparkRequests = java.util.concurrent.ConcurrentHashMap<String, Pair<net.dv8tion.jda.api.interactions.InteractionHook, Map<String, String>>>()
+    val pendingSparkRequests = ConcurrentHashMap<String, Pair<InteractionHook, Map<String, String>>>()
     
     private val clients = CopyOnWriteArrayList<Socket>()
     private val clientWriters = CopyOnWriteArrayList<PrintWriter>()
@@ -66,6 +75,26 @@ class BridgeManager(private val plugin: CaelestiaPlugin, private val discordBot:
                 plugin.logger.info("Client ${socket.inetAddress.hostAddress} authenticated successfully.")
                 clients.add(socket)
                 clientWriters.add(writer)
+                
+                val packUrl = "http://${plugin.packConfig.rpServerIp}:${plugin.packConfig.rpServerPort}/emojis.zip"
+                val packMsg = BridgeMessage(
+                    source = Source.PAPER,
+                    type = Type.PACK_URL,
+                    playerName = "System",
+                    playerUuid = UUID.randomUUID().toString(),
+                    message = packUrl
+                )
+                writer.println(gson.toJson(packMsg))
+
+                val emojiMapJson = gson.toJson(EmojiRegistry.discordToMcMap)
+                val emojiMsg = BridgeMessage(
+                    source = Source.PAPER,
+                    type = Type.EMOJI_SYNC,
+                    playerName = "System",
+                    playerUuid = UUID.randomUUID().toString(),
+                    message = emojiMapJson
+                )
+                writer.println(gson.toJson(emojiMsg))
                 
                 var line: String? = null
                 while (running && reader.readLine().also { line = it } != null) {
@@ -113,7 +142,7 @@ class BridgeManager(private val plugin: CaelestiaPlugin, private val discordBot:
             when (msg.type) {
                 Type.SYSTEM -> {
                     // Send directly to the main bridge channel as pure text
-                    plugin.discordBot.sendMessage("**[System]** ${msg.message}")
+                    plugin.discordBot.sendMessage(msg.message)
                 }
                 Type.DISCORD_REPLY -> {
                     plugin.discordBot.replyToMessage(
@@ -125,9 +154,9 @@ class BridgeManager(private val plugin: CaelestiaPlugin, private val discordBot:
 
                     val mcMessage = msg.message
                     
-                    val mm = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
-                    val paperFormat = "<color:#5865F2>💬</color> <gray>${msg.playerName ?: "Unknown"}</gray> <dark_gray>•</dark_gray> <white>${msg.message}</white>"
-                    plugin.server.broadcast(mm.deserialize(paperFormat))
+                    val refAuthor = plugin.discordBot.messageCache[msg.messageId]?.first ?: "Discord"
+                    val paperFormat = "<white>💬</white> <dark_gray>[Replying to $refAuthor]</dark_gray> <gray>${msg.playerName ?: "Unknown"}</gray> <dark_gray>•</dark_gray> <white>${msg.message}</white>"
+                    plugin.server.broadcast(miniMessage.deserialize(paperFormat))
                     
                     plugin.bridgeManager.broadcast(BridgeMessage(
                         source = Source.PAPER,
@@ -140,8 +169,8 @@ class BridgeManager(private val plugin: CaelestiaPlugin, private val discordBot:
                 Type.CHAT -> {
                     // It's from NeoForge, broadcast to Paper
                     if (msg.source == Source.NEOFORGE) {
-                        var mcFormatted = msg.message
-                        var discordFormatted = msg.message
+                        var mcFormatted = EmojiRegistry.translateDiscordToMc(msg.message)
+                        var discordFormatted = EmojiRegistry.translateMcToDiscord(msg.message)
                         
                         // Scan for @Username
                         val words = msg.message.split(" ")
@@ -155,11 +184,11 @@ class BridgeManager(private val plugin: CaelestiaPlugin, private val discordBot:
                             }
                         }
 
-                        val mm = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
-                        val paperFormat = plugin.caelestiaConfig.msgNeoForgeToMc
+                        var finalMsg = plugin.caelestiaConfig.msgNeoForgeToMc
                             .replace("%username%", msg.playerName ?: "Unknown")
                             .replace("%message%", mcFormatted)
-                        plugin.server.broadcast(mm.deserialize(paperFormat))
+                        finalMsg = EmojiRegistry.translateDiscordToMc(finalMsg)
+                        plugin.server.broadcast(miniMessage.deserialize(finalMsg))
                         
                         // And send to Discord
                         val discordMsg = plugin.caelestiaConfig.msgMcToDiscord
@@ -167,34 +196,51 @@ class BridgeManager(private val plugin: CaelestiaPlugin, private val discordBot:
                             .replace("%message%", discordFormatted)
                         plugin.discordBot.sendWebhook(
                             msg.playerName ?: "Unknown",
-                            msg.playerUuid ?: "00000000-0000-0000-0000-000000000000",
                             discordMsg
                         )
                     }
                 }
                 Type.JOIN -> {
                     if (msg.source == Source.NEOFORGE) {
+                        // Show in Paper in-game chat with :modded: emoji
+                        val inGameMsg = ":modded: <gray>${msg.playerName ?: "Unknown"}</gray> <dark_gray>joined the modded server</dark_gray>"
+                        val translated = EmojiRegistry.translateDiscordToMc(inGameMsg)
+                        plugin.server.broadcast(miniMessage.deserialize(translated))
+                        
+                        // Also send to Discord via webhook
                         if (plugin.caelestiaConfig.featRelayJoinQuit) {
                             val discordMsg = plugin.caelestiaConfig.msgNeoForgeJoin.replace("%player%", msg.playerName ?: "Unknown")
-                            plugin.discordBot.sendWebhook(msg.playerName ?: "Unknown", msg.playerUuid ?: "00000000-0000-0000-0000-000000000000", discordMsg)
+                            plugin.discordBot.sendWebhook(msg.playerName ?: "Unknown", discordMsg)
                         }
                     }
                 }
                 Type.QUIT -> {
                     if (msg.source == Source.NEOFORGE) {
+                        // Show in Paper in-game chat with :modded: emoji
+                        val inGameMsg = ":modded: <gray>${msg.playerName ?: "Unknown"}</gray> <dark_gray>left the modded server</dark_gray>"
+                        val translated = EmojiRegistry.translateDiscordToMc(inGameMsg)
+                        plugin.server.broadcast(miniMessage.deserialize(translated))
+                        
+                        // Also send to Discord via webhook
                         if (plugin.caelestiaConfig.featRelayJoinQuit) {
                             val discordMsg = plugin.caelestiaConfig.msgNeoForgeQuit.replace("%player%", msg.playerName ?: "Unknown")
-                            plugin.discordBot.sendWebhook(msg.playerName ?: "Unknown", msg.playerUuid ?: "00000000-0000-0000-0000-000000000000", discordMsg)
+                            plugin.discordBot.sendWebhook(msg.playerName ?: "Unknown", discordMsg)
                         }
                     }
                 }
                 Type.DEATH -> {
                     if (msg.source == Source.NEOFORGE) {
+                        // Show in Paper in-game chat with :modded: emoji
+                        val inGameMsg = ":modded: <gray>${msg.playerName ?: "Unknown"}</gray> <dark_gray>${msg.message}</dark_gray>"
+                        val translated = EmojiRegistry.translateDiscordToMc(inGameMsg)
+                        plugin.server.broadcast(miniMessage.deserialize(translated))
+                        
+                        // Also send to Discord via webhook
                         if (plugin.caelestiaConfig.featRelayDeath) {
                             val discordMsg = plugin.caelestiaConfig.msgNeoForgeDeath
                                 .replace("%player%", msg.playerName ?: "Unknown")
                                 .replace("%death_message%", msg.message)
-                            plugin.discordBot.sendWebhook(msg.playerName ?: "Unknown", msg.playerUuid ?: "00000000-0000-0000-0000-000000000000", discordMsg)
+                            plugin.discordBot.sendWebhook(msg.playerName ?: "Unknown", discordMsg)
                         }
                     }
                 }
@@ -202,11 +248,11 @@ class BridgeManager(private val plugin: CaelestiaPlugin, private val discordBot:
                     val pending = pendingSparkRequests.remove(msg.messageId)
                     if (pending != null) {
                         val paperStats = pending.second
-                        val neoForgeStats = com.google.gson.Gson().fromJson(msg.message, Map::class.java) as Map<*, *>
+                        val neoForgeStats = gson.fromJson(msg.message, Map::class.java) as Map<*, *>
                         
-                        val embed = net.dv8tion.jda.api.EmbedBuilder()
+                        val embed = EmbedBuilder()
                             .setTitle("Caelestia Server Status")
-                            .setColor(java.awt.Color.decode("#A259FF"))
+                            .setColor(Color.decode("#A259FF"))
                             .addField("Vanilla Server", "TPS: ${paperStats["tps"]}\nMSPT: ${paperStats["mspt"]}ms\nCPU: ${paperStats["cpu"]}%\nRAM: ${paperStats["ram"]}\nPlayers: ${paperStats["players"]}\nChunks: ${paperStats["chunks"]}\nUptime: ${paperStats["uptime"]}", false)
                             .addField("Modded Server", "TPS: ${neoForgeStats["tps"]}\nMSPT: ${neoForgeStats["mspt"]}ms\nCPU: ${neoForgeStats["cpu"]}%\nRAM: ${neoForgeStats["ram"]}\nPlayers: ${neoForgeStats["players"]}\nChunks: ${neoForgeStats["chunks"]}\nUptime: ${neoForgeStats["uptime"]}", false)
                             .build()
@@ -218,5 +264,17 @@ class BridgeManager(private val plugin: CaelestiaPlugin, private val discordBot:
         } catch (e: Exception) {
             plugin.logger.warning("Failed to decode bridge message: ${e.message}")
         }
+    }
+
+    fun sendEmojiSync() {
+        val emojiMapJson = gson.toJson(EmojiRegistry.discordToMcMap)
+        val emojiMsg = BridgeMessage(
+            source = Source.PAPER,
+            type = Type.EMOJI_SYNC,
+            playerName = "System",
+            playerUuid = UUID.randomUUID().toString(),
+            message = emojiMapJson
+        )
+        broadcast(emojiMsg)
     }
 }

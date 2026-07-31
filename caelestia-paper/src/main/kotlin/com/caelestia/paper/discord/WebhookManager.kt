@@ -44,21 +44,37 @@ class WebhookManager(private val plugin: CaelestiaPlugin, private val discordBot
         httpClient.connectionPool.evictAll()
     }
 
-    fun sendMessage(username: String, uuid: UUID?, content: String) {
+    private fun getOrCreateWebhookUrl(): String? {
+        if (webhookUrl != null) return webhookUrl
+        val channel = discordBotManager.getChannel() ?: return null
+        return try {
+            val webhooks = channel.retrieveWebhooks().complete()
+            val existing = webhooks.find { it.name == "Caelestia Bridge" }
+            if (existing != null) {
+                webhookUrl = existing.url
+                existing.url
+            } else {
+                val created = channel.createWebhook("Caelestia Bridge").complete()
+                webhookUrl = created.url
+                created.url
+            }
+        } catch (e: Exception) {
+            plugin.logger.warning("Failed to retrieve/create webhook: ${e.message}")
+            null
+        }
+    }
+
+    fun sendMessage(username: String, content: String) {
         val config = plugin.caelestiaConfig
-        val url = webhookUrl
+        val url = getOrCreateWebhookUrl()
         
         if (!config.featUseWebhooks || url == null) {
-            val prefix = if (uuid == null) "" else "**$username** » "
+            val prefix = "**$username** » "
             discordBotManager.sendMessage("$prefix$content")
             return
         }
 
-        val avatarUrl = if (uuid != null) {
-            SkinUtil.getAvatarUrl(config.avatarSkinApiUrl, uuid, config.avatarRenderType, config.avatarScale)
-        } else {
-            null
-        }
+        val avatarUrl = SkinUtil.getAvatarUrl(config.avatarSkinApiUrl, username, config.avatarRenderType, config.avatarScale)
 
         plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
             try {

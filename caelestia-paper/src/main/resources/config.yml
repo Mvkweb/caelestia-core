@@ -16,11 +16,14 @@ xp-clumps:
 
 messages:
   minecraft-to-discord: "%message%"
-  discord-to-minecraft: "<color:#5865F2>💬</color> <gray>%username%</gray> <dark_gray>•</dark_gray> <white>%message%</white>"
-  neoforge-to-minecraft: "<color:#E36139>⚙</color> <gray>%username%</gray> <dark_gray>•</dark_gray> <white>%message%</white>"
+  discord-to-minecraft: ":discord: <gray>%username%</gray> <dark_gray>•</dark_gray> <white>%message%</white>"
+  neoforge-to-minecraft: ":modded: <gray>%username%</gray> <dark_gray>•</dark_gray> <white>%message%</white>"
   join: "joined the server"
   quit: "left the server"
   death: "%death_message%"
+  neoforge-join: "joined the server"
+  neoforge-quit: "left the server"
+  neoforge-death: "%death_message%"
   server-start: "🟢 **Server has started!**"
   server-stop: "🔴 **Server is shutting down...**"
 

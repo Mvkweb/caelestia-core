@@ -1,24 +1,13 @@
-package com.caelestia.paper.bridge
+package com.caelestia.core.bridge
 
 enum class Source {
-    PAPER,
-    NEOFORGE,
-    DISCORD
+    PAPER, NEOFORGE, DISCORD
 }
 
 enum class Type {
-    CHAT,
-    JOIN,
-    QUIT,
-    DEATH,
-    ADVANCEMENT,
-    TAB_COMPLETIONS,
-    SPARK_REQUEST,
-    SPARK_RESPONSE,
-    SYSTEM,
-    DISCORD_REPLY,
-    PACK_URL,
-    EMOJI_SYNC
+    CHAT, JOIN, QUIT, DEATH, ADVANCEMENT, TAB_COMPLETIONS,
+    SPARK_REQUEST, SPARK_RESPONSE, SYSTEM, DISCORD_REPLY,
+    PACK_URL, EMOJI_SYNC
 }
 
 data class BridgeMessage(

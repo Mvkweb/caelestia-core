@@ -23,13 +23,13 @@ jobs:
     - name: Make gradlew executable
       run: |
         chmod +x caelestia-paper/gradlew
-        chmod +x caelestia-core/gradlew
+        chmod +x caelestia-neoforge/gradlew
 
     - name: Build Paper Plugin
       run: cd caelestia-paper && ./gradlew shadowJar --no-daemon
 
     - name: Build NeoForge Mod
-      run: cd caelestia-core && ./gradlew build --no-daemon
+      run: cd caelestia-neoforge && ./gradlew build --no-daemon
       
     - name: Upload Paper Artifact
       uses: actions/upload-artifact@v4
@@ -40,5 +40,5 @@ jobs:
     - name: Upload NeoForge Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: caelestia-core
-        path: caelestia-core/build/libs/caelestiaprotection-*.jar
+        name: caelestia-neoforge
+        path: caelestia-neoforge/build/libs/caelestia-*.jar

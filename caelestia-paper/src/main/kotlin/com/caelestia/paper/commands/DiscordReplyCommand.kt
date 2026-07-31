@@ -27,16 +27,18 @@ class DiscordReplyCommand(private val plugin: CaelestiaPlugin) : Command(
 
         val messageId = args[0]
         val messageContent = args.drop(1).joinToString(" ")
+        val mcFormatted = com.caelestia.paper.emoji.EmojiRegistry.translateDiscordToMc(messageContent)
+        val discordFormatted = com.caelestia.paper.emoji.EmojiRegistry.translateMcToDiscord(messageContent)
 
         plugin.discordBot.replyToMessage(
             username = sender.name,
             uuidStr = sender.uniqueId.toString(),
             discordMessageId = messageId,
-            replyContent = messageContent
+            replyContent = discordFormatted
         )
 
         val mm = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
-        val formattedReply = "<color:#5865F2>💬</color> <gray>${sender.name}</gray> <dark_gray>•</dark_gray> <white>$messageContent</white>"
+        val formattedReply = "<color:#5865F2>💬</color> <gray>${sender.name}</gray> <dark_gray>•</dark_gray> <white>$mcFormatted</white>"
         plugin.server.broadcast(mm.deserialize(formattedReply))
 
         val bridgeMessage = com.caelestia.paper.bridge.BridgeMessage(
@@ -44,7 +46,7 @@ class DiscordReplyCommand(private val plugin: CaelestiaPlugin) : Command(
             type = com.caelestia.paper.bridge.Type.CHAT,
             playerName = sender.name,
             playerUuid = sender.uniqueId.toString(),
-            message = messageContent
+            message = mcFormatted
         )
         plugin.bridgeManager.broadcast(bridgeMessage)
 
